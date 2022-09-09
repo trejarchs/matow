@@ -1,0 +1,54 @@
+h1, h2 {
+    color: var(--h12-color);
+}
+
+h3 {
+    color: var(--h3-color);
+}
+
+h1 {
+    font-size: 30px
+}
+
+h2 {
+    font-size: 25px;
+}
+
+h3 {
+    font-size: 20px;
+}
+
+p {
+    text-align: justify;
+    color: var(--text-color);
+    line-height: 25px;
+}
+
+li {
+    color: var(--text-color);
+    line-height: 25px;
+}
+
+a {
+    color: var(--link-color);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--link-focus-color);
+    text-decoration: underline;
+}
+
+img {
+    background-color: transparent;
+    max-width: 100%;
+}
+
+code:not(pre code) {
+    background-color: var(--code-color);
+    padding: 0 5px;
+    border-radius: 3px;
+} 
+
+.token {background-color: transparent !important;}
+
