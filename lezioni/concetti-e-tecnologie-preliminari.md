@@ -85,7 +85,7 @@ Siti come GitHub, Reddit, Diaspora, Stack Exchange, OpenStreetMap, e SourceForge
 
 Questi tre strumenti rappresentano la base per lo sviluppo web, in quanto ognuno di questi adempie ad un compito specifico e insieme si completano.
 
-<img src="../images/html-logo.png"
+<img src="images/html-logo.png"
     alt="HTML5 Logo"
     style="float: left; 
           margin: 0 20px 10px 0;
