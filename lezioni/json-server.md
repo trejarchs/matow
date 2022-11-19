@@ -1,0 +1,207 @@
+# JSON server
+
+Installazione del web server https://github.com/typicode/json-server
+
+## Configurazione di rete:
+ __________________________________
+|                                 _|
+|C1----(lab)----R----(bridge)----|_|<-NIC
+|                                 ||
+|               C2----(bridge)----||
+|_Host OS__________________________|
+
+C1 funge da server che ospita il server mentre C2 è il client che vuole accedere
+
+## Config C1
+
+Installare il server con i seguenti comandi: 
+```bash  
+sudo apt install npm
+sudo npm install -g json-server
+```
+
+Creare un file json che verrà utilizzato dal server:
+```bash
+nano mauro.json
+```
+
+Essendo un file Json va formattato per bene, dove le `{}` rappresentano un oggetto json, le `[]` degli array, poi abbiamo associazioni chiave valore tramite i `:`.
+```json
+{
+    "dati": [
+        {"id": 1, "temp": 34, "umidity": 55 },
+        {"id": 10, "temp": 34, "umidity": 55 },
+        {"id": 19, "temp": 34, "umidity": 55 },
+        {"id": 12, "temp": 34, "umidity": 55 },
+        {"id": 111, "temp": 34, "umidity": 55 },
+        {"id": 199, "temp": 34, "umidity": 55 },
+        {"id": 103, "temp": 34, "umidity": 55 },
+        {"id": 20, "temp": 34, "umidity": 55 },
+        {"id": 33, "temp": 34, "umidity": 55 },
+        {"id": 40, "temp": 34, "umidity": 55 },
+        {"id": 50, "temp": 34, "umidity": 55 }        
+    ],
+    "dati2":
+        {"id": 66, "name": "ins"}
+}
+```
+
+Si lancia il server:
+```bash
+json-server -w mauro.json -H <IP del server>
+```
+
+L'ip in questo caso sarà l'ip della rete privata in cui è posizionato il server.
+Se non specificato altrimenti, il server ascolta sulla porta 3000
+
+A questo punto per verificare che il server sia funzionante, dal server stesso apriamo il browser e ci connettiamo a `http://<ip del server>:3000`
+Se tutto funziona viene aperta una pagina web che mostra i vari json che abbiamo creato.
+
+## Config Router
+
+Configurare la macchina Debian ins per funzionare come router tramite:
+```bash
+sudo bash router.sh
+```
+
+Inoltre se le interfacce sono malconfigurate con un indirizzo di autoconfig del tipo `169.254.x.x`, fare:
+```bash
+sudo service networking restart
+```
+
+Aiuta a far funzionare le configurazioni per bene.
+
+Il sito web dovrebbe essere accessibile dal router tramite l'interfaccia enp0s8, sempre utilizzando il browser.
+
+Solo il client esterno alla rete non può ancora accedere al servizio, è necessaria una regola di natting particolare da inserire nel router:
+```bash
+sudo iptables -t nat -A PREROUTING -p tcp -d <Ip della interfaccia enp0s3 del router> --dport 80 -j DNAT --to-destination <Ip del server nella rete privata>:3000
+```
+
+In questo modo, qualsiasi client che dall'esterno vuole accedere al server, dovrà utilizzare l'ip dell'interfaccia enp0s3 del router e la porta 80.
+La regola di prerouting viene utilizzata appunto prima che il pacchetto venga instradato tramite le varie tabelle di routing, e andando a tradurre l'indirizzo di destinazione in quello del server,
+il router saprà instradare il pacchetto verso il router tramite l'interfaccia enp0s8, facendo funzionare tutto.
+
+## Config C2
+
+Vogliamo fare in modo che il Client (C2) crei un gran numero di richieste al nostro server per fare degli stress-test.
+Questo è possibile installando un pacchetto tramite:
+```bash
+sudo apt install libev4 libev-dev python-dev-is-python3
+sudo pip install boom
+```
+
+Per creare le richieste si lancia il comando:
+```bash
+boom http://<ip dell'interfaccia enp0s3 del router> -c 10 -n 100
+```
+
+Per il client esterno alla rete privata, l'unico modo di accedere al server è tramite il router, che poi elabora il pacchetto secondo le regole di NAT.
+La flag `-c` serve a indicare quante richieste concorrenti creare, `-n` indica il numero totale di richieste da creare, al posto di -n possiamo indicare `-d` per inviare pacchetti entro una fascia temporale definita in secondi.
+
+A questo punto possiamo analizzare i dati ricavati da boom sul client e dal json-server sul server per capire le performance del servizio.
+Dal nostro punto di vista, per fare management della rete, non potremo utilizzare le informazioni ricavate da boom, avremo accesso solo ai log del server o ai dati estratti da qualche sonda installata nella rete.
+
+Andiamo ad aumentare di un ordine di grandezza alla volta le flag -c e -n per avere una idea di quante richieste sappia gestire il nostro servizio.
+
+## Load Balancing
+
+Vogliamo in qualche modo potenziare il nostro servizio, ripartendo il traffico su più server per gestire più richieste.
+Possiamo adottare più strategie:
+- Creare un nuovo processo in cui instanziamo un nuovo json-server all'interno di una sola VM che fa da server
+- Creare una nuova VM (o Docker Container) in cui eseguire una nuova istanza del json-server
+
+La prima strategia non è ottimale, ma cominciamo da questa per vedere l'effetto.
+All'interno della macchina server:
+```bash
+cp mauro.json mauro2.json
+json-server --watch mauro2.json -H <ip del server nella rete privata> -p 3001
+```
+
+Si crea un nuovo file json identico al precedente per far si che ogni server abbia il proprio json di riferimento.
+Quando creiamo il nuovo json server, utilizziamo nuovamente l'ip della VM server ma specifichiamo una porta differente.
+Dato che i due servizi fanno riferimento a due processi differenti, e la VM è sempre la stessa con lo stesso IP, devo creare socket diversi con porte differenti.
+
+A questo punto però ci sono da aggiornare le politiche del router:
+```bash
+sudo iptables -t nat -I PREROUTING -p tcp -d <ip della interfaccia enp0s3 del router> --dport 80 -m statistic --mode random --probability 0.5 -j DNAT --to-destination <ip del server nella rete privata>:3001
+```
+
+Si usa `-I` per far si che la regola stia in cima alla catena, e indichiamo come tutto il traffico destinato a quell'ip-porta debba essere inviato al server sulla porta 3001 seconda una politica statistica; ovvero il 50% delle volte i pacchetti saranno inviati al socket 3001, quindi alla seconda istanza del json-server, l'altro 50% delle volte il pacchetto seguirà la regola successiva che è quella che abbiamo inserito nel router, che invia i pacchetti al socket 3000, quindi alla prima istanza del json-server.
+
+Altra politica di ripartizione del traffico, non più statistico-probabilistica ma **Round-Robin**, ovvero un pacchetto a ogni server a turni alterni.
+La regola da utilizzare (al posto di quella qua sopra statistica) è:
+```bash
+sudo iptables -t nat -I PREROUTING -p tcp -d <ip della interfaccia enp0s3 del router> --dport 80 -m statistic --mode nth --every 2 --packet 0 -j DNAT --to-destination <ip del server nella rete privata>:3001
+```
+
+Ovvero, a partire dal primo pacchetto (lo 0), invia ogni secondo pacchetto (1 ogni 2) al server in ascolto sulla porta 3001.
+Di nuovo, i pacchetti non accettati da questa regola passano alla regola successiva che li invia al server in ascolto sulla porta 3000.
+
+Strategie molto simili, ma in generale la tecnica statisca è quella più robusta.
+
+Se avessimo adottato la seconda strategia di **scaling del server**, quindi con più VM o container, le regole iptables sarebbero state identiche se non per l'ultima flag `--to-destination` in cui avrei dovuto specificare l'ip specifico delle varie macchine, che in questo caso sarebbero stati diversi, mentre la porta di ascolto dei server potrebbe anche essere uguale.
+
+## Traffic Limiting
+
+Assumendo di aver risolto il problema della scalabilità del servizio, si passa a vedere come limitare in qualche modo il traffico in arrivo per evitare di sovraccaricare il servizio.
+Il traffico in questo caso può essere di due tipi: benigno, quindi utente che fanno richieste genuine, e maligno, dove un attaccante cerca di effettuare un attacco Dos o DDos per limitare la avalability del servizio.
+
+Possiamo limitare il traffico sia a monte (nella catena FORWARD router) o a valle (nella catena INPUT del server), il risultato sarà lo stesso ma con alcuni dettagli delle regole cambiati.
+Dovremo effettuare una limitazione del traffico con regole stateful, perchè una volta accettata una sessione, vogliamo servirla senza che siano droppati dei suoi pacchetti.
+Perciò occorre implementare un meccanisco per stabilire se una connessione è **NEW** o **ESTABLISHED**, e poi prendere delle decisioni per le sessioni NEW.
+
+Come operazione preliminare, utilizziamo la regola:
+```bash
+sudo iptables -A FORWARD -p tcp -m conntrack --ctstate NEW -j LOG --log-prefix "NEW TCP CONN: "
+```
+
+In questo modo salviamo nel log del sistema una entry per ogni pacchetto SYN di inizializziazione di una connessione TCP.
+Inseriamo il log-prefix per poter trovare queste entry dentro al log in modo rapido.
+```bash
+sudo tail -f /var/log/kern.log | grep "NEW TCP CONN: "
+```
+
+Questo ci da una idea di quali sono i dati che abbiamo a disposizone, anche se questa regola verrà poi modificata per non avere un impatto sulle prestazioni del router.
+
+Una prima regola che ci permette di limitare il traffico è: 
+```bash
+sudo iptables -A FORWARD -p tcp -d <ip del server nella rete privata> --dport 3000 -m limit --limit 50/sec --limit-burst 30 -j ACCEPT
+```
+
+Stiamo limitando traffico nel router, le regole di NAT sono ancora valide ed operano nella chain PREROUTING, perciò qua nella chain FORWARD è già avvenuta la traduzione ip pubblico-ip privato.
+La politica che stiamo implementando però limita TUTTO il traffico, cosa che vogliamo invece riservare SOLO alle connessioni NEW.
+Perciò quello che dobbiamo fare è creare una chain dedicata al limiting del traffico che verrà usata solo per connessioni nuove.
+
+```bash
+sudo iptables -N RATE-LIMIT
+sudo iptables -A FORWARD -p tcp -d <ip privato del server> --dport 3000 -m conntrack --ctstate NEW -j RATE-LIMIT
+sudo iptables -A RATE-LIMIT -m limit --limit 50/sec --limit-burst 30 -j ACCEPT
+sudo iptables -A RATE-LIMIT -j DROP
+```
+
+con la regola nella chain forward solo i nuovi flussi che vengono poi rimandati alla chain RATE-LIMIT.
+Qua diciamo che accettiamo 50 nuove connessioni al secondo con una tolleranza di 30, e tutto quello che non viene accettato viene droppato.
+Come prima soluzione può andare bene, ma in questo caso parliamo di **FILTRAGGIO AGGREGATO**, non si fa distinzione alcuna tra queste connessioni.
+Perciò possiamo utilizzare un'altra modalità di filtraggio basato sulle funzioni hash, perciò dopo aver cancellato la regola `rate-limit -limit` si inserisce:
+
+```bash
+sudo iptables -I RATE-LIMIT -m hashlimit --hashlimit-mode srcip --hashlimit-upto 50/sec --hashlimit-burst 20 --hashlimit-name conn_rate_limit -j ACCEPT
+```
+
+viene calcolata un hash a partire dagli indirizzi ip sorgente del traffico, e permetto ad ogni ip di generare fino a 50 connessioni al secondo.
+Scegliendo bene il numero di connessioni per ip possiamo bloccare attacchi DDoS.
+
+Infine possiamo modificare la regola di logging vista prima ed includerla nella custom chain, campionando le nuove connessioni per avere una idea di cosa sta accendendo senza impattare troppo sulle prestazioni.
+```bash
+sudo iptables -I RATE-LIMIT 2 -m limit --limit 1/sec -j LOG --log-prefix "NEW TCP REJECTED CONN: "
+```
+
+In questo modo possiamo vedere cosa finisce nel log con un comando simile a prima:
+```bash
+sudo tail -f /var/log/kern.log | grep "NEW TCP REJECTED CONN: "
+```
+
+La regola basata su hash dell'ip sorgente è molto buona, ma se ci trovassimo contro un attacco DDoS con moltissimi zombie, ognuno che mantiene un numero di connessioni molto basso, questa regola lascerebbe passare il traffico senza problemi e globalmente l'attacco andrebbe a segno.
+
+Perciò si possono COMBINARE le due strategie, prima si fa un limiting basato su hash del ip sorgente, poi creando una nuova chain, vado a controllare che globalmente il traffico sia entro certi limiti, e posso sfruttare questo meccanismo di salto di chain per creare regole di filtraggio e limitaggio molto complesse

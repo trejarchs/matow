@@ -424,6 +424,7 @@ body {
     =========== */
 #chapter-name,
 #search-req {
+    line-height: 30px;
     font-size: 30px;
     margin-top: 20px;
     color: var(--text-color);

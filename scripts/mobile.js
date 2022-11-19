@@ -113,7 +113,7 @@
 
     function lightSynstax() {
         let theme = zero.shadowRoot.querySelectorAll('link')[0];
-        theme.href = "https://cdn.jsdelivr.net/gh/PrismJS/prism@1/themes/prism.min.css"
+        theme.href = "https://cdn.jsdelivr.net/gh/PrismJS/prism@1/themes/prism-solarizedlight.min.css"
     }
 
     function darkSynstax() {
