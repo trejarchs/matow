@@ -1,5 +1,5 @@
 let chapters = [
-    { "name":"Appunti di Intelligent and Secure Network - by Nik Kitchen", "path":"appunti-isn", "lessons":[
+    { "name":"Appunti di Intelligent and Secure Network - by Nicola Cucina", "path":"appunti-isn", "lessons":[
         {"name":"Creazione Router virtuale", "path":"router"},
         {"name":"Creazione Switch virtuale", "path":"switch"},
         {"name":"IPTables", "path":"iptables"},
