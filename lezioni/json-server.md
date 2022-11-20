@@ -3,12 +3,8 @@
 Installazione del web server https://github.com/typicode/json-server
 
 ## Configurazione di rete:
- __________________________________
-|                                 _|
-|C1----(lab)----R----(bridge)----|_|<-NIC
-|                                 ||
-|               C2----(bridge)----||
-|_Host OS__________________________|
+
+![](/lezioni/pics/serverjson.png)
 
 C1 funge da server che ospita il server mentre C2 è il client che vuole accedere
 

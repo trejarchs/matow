@@ -1,19 +1,14 @@
 # IP-Spoofing
 
->Da Wikipedia: 
->
->"una tecnica di attacco informatico che utilizza un pacchetto IP nel quale viene falsificato l'indirizzo IP del mittente."
+Da Wikipedia: 
+
+"una tecnica di attacco informatico che utilizza un pacchetto IP nel quale viene falsificato l'indirizzo IP del mittente."
 
 Utilizziamo questo attacco per testare le nostre configurazioni e come possiamo impostare i firewall per combatterli.
 
 ## Configurazione di rete:
- __________________________________
-|                                 _|
-|C1----(lab)----R----(bridge)----|_|<-NIC
-|                                 ||
-|               C2----(bridge)----||
-|_Host OS__________________________|
 
+![](/lezioni/pics/r2c.png)
 
 In questo caso C1 invia pacchetti a C2 fingendosi un altro nodo per trickare C2 in un comportamento non desiderato.
 C1 e C2 sono in due reti diverse (separate dal router R) per simulare un attacco dalla rete, con una semplificazione:
@@ -90,12 +85,7 @@ Per bloccare lo spoofing di C2 dovrei usare indirizzi Ip della sua sottorete, ch
 
 Se passiamo alla configurazione con lo switch virtuale, cambia qualcosa?
 
- ___________________________________________
-|                                          _|
-|C1---(lab1)---S---(lab)---R---(bridge)---|_|<-NIC
-|                                          ||
-|                        C2----(bridge)----||
-|_Host OS___________________________________|
+![](/lezioni/pics/rs2c.png)
 
 In realtà no, possiamo utilizzare sia le regole iptables nel router che nello switch, abbiamo la possibilità di scegliere Firewalling "Classico" o Trasparente.
 Per far funzionare le regole scritte sopra, caricare il modulo:

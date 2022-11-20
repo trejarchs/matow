@@ -28,6 +28,7 @@ p {
 li {
     color: var(--text-color);
     line-height: 25px;
+    margin-left: -15px !important;
 }
 
 a {
