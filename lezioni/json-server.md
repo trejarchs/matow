@@ -4,7 +4,7 @@ Installazione del web server https://github.com/typicode/json-server
 
 ## Configurazione di rete:
 
-![](/lezioni/pics/serverjson.png)
+![](lezioni/pics/serverjson.png)
 
 C1 funge da server che ospita il server mentre C2 è il client che vuole accedere
 
