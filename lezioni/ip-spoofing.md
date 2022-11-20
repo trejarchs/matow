@@ -8,7 +8,7 @@ Utilizziamo questo attacco per testare le nostre configurazioni e come possiamo 
 
 ## Configurazione di rete:
 
-![](./lezioni/pics/r2c.png)
+![](./pics/r2c.png)
 
 In questo caso C1 invia pacchetti a C2 fingendosi un altro nodo per trickare C2 in un comportamento non desiderato.
 C1 e C2 sono in due reti diverse (separate dal router R) per simulare un attacco dalla rete, con una semplificazione:
@@ -85,7 +85,7 @@ Per bloccare lo spoofing di C2 dovrei usare indirizzi Ip della sua sottorete, ch
 
 Se passiamo alla configurazione con lo switch virtuale, cambia qualcosa?
 
-![](./lezioni/pics/rs2c.png)
+![](./pics/rs2c.png)
 
 In realtà no, possiamo utilizzare sia le regole iptables nel router che nello switch, abbiamo la possibilità di scegliere Firewalling "Classico" o Trasparente.
 Per far funzionare le regole scritte sopra, caricare il modulo:
